@@ -17,7 +17,7 @@ ENV \
     DEBIAN_FRONTEND="noninteractive" \
     RESOURCES_PATH="/resources" \
     SSL_RESOURCES_PATH="/resources/ssl" \
-    WORKSPACE_HOME="/workspace"
+    WORKSPACE_HOME="/home/mk301"
 
 WORKDIR $HOME
 

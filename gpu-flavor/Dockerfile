@@ -8,7 +8,7 @@ ENV WORKSPACE_FLAVOR=$ARG_WORKSPACE_FLAVOR
 USER root
 
 ### NVIDIA CUDA BASE ###
-# https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/10.1/ubuntu18.04-x86_64/base/Dockerfile
+# https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/10.2/ubuntu18.04-x86_64/base/Dockerfile
 RUN apt-get update && apt-get install -y --no-install-recommends gnupg2 curl ca-certificates && \
     curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub | apt-key add - && \
     echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda.list && \
@@ -19,14 +19,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends gnupg2 curl ca-
     rm -rf /tmp/* && \
     rm -rf /var/lib/apt/lists/*
 
-ENV CUDA_VERSION 10.1.243
-ENV CUDA_PKG_VERSION 10-1=$CUDA_VERSION-1
+ENV CUDA_VERSION 10.2.89
+ENV CUDA_PKG_VERSION 10-2=$CUDA_VERSION-1
 
 # For libraries in the cuda-compat-* package: https://docs.nvidia.com/cuda/eula/index.html#attachment-a
 RUN apt-get update && apt-get install -y --no-install-recommends \
         cuda-cudart-$CUDA_PKG_VERSION \
-        cuda-compat-10-1 && \
-    ln -s cuda-10.1 /usr/local/cuda && \
+        cuda-compat-10-2 && \
+    ln -s cuda-10.2 /usr/local/cuda && \
     rm -rf /var/lib/apt/lists/* && \
     # Cleanup - cannot use cleanup script here, otherwise too much is removed
     apt-get clean && \
@@ -46,10 +46,10 @@ ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64:${LD_LIBRARY_P
 # nvidia-container-runtime
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
-ENV NVIDIA_REQUIRE_CUDA "cuda>=10.1 brand=tesla,driver>=396,driver<397 brand=tesla,driver>=410,driver<411 brand=tesla,driver>=418,driver<419"
+ENV NVIDIA_REQUIRE_CUDA "cuda>=10.2 brand=tesla,driver>=396,driver<397 brand=tesla,driver>=410,driver<411 brand=tesla,driver>=418,driver<419"
 
 ### CUDA RUNTIME ###
-# https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/10.1/ubuntu18.04-x86_64/runtime/Dockerfile
+# https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/10.2/ubuntu18.04-x86_64/runtime/Dockerfile
 
 ENV NCCL_VERSION 2.7.8
 
@@ -57,8 +57,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         cuda-libraries-$CUDA_PKG_VERSION \
         cuda-npp-$CUDA_PKG_VERSION \
         cuda-nvtx-$CUDA_PKG_VERSION \
-        libcublas10=10.2.1.243-1 \
-        libnccl2=$NCCL_VERSION-1+cuda10.1 && \
+        libcublas10=10.2.3.254-1 \
+        libnccl2=$NCCL_VERSION-1+cuda10.2 && \
     apt-mark hold libnccl2 && \
     # Cleanup - cannot use cleanup script here, otherwise too much is removed
     apt-get clean && \
@@ -72,7 +72,7 @@ RUN apt-mark hold libcublas10
 ### END CUDA RUNTIME ###
 
 ### CUDA DEVEL ###
-# https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/10.1/ubuntu18.04-x86_64/devel/Dockerfile
+# https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/10.2/ubuntu18.04-x86_64/devel/Dockerfile
 RUN apt-get update && apt-get install -y --no-install-recommends \
         cuda-nvml-dev-$CUDA_PKG_VERSION \
         cuda-command-line-tools-$CUDA_PKG_VERSION \
@@ -80,8 +80,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         cuda-npp-dev-$CUDA_PKG_VERSION \
         cuda-libraries-dev-$CUDA_PKG_VERSION \
         cuda-minimal-build-$CUDA_PKG_VERSION \
-        libcublas-dev=10.2.1.243-1 \
-        libnccl-dev=$NCCL_VERSION-1+cuda10.1 && \
+        libcublas-dev=10.2.3.254-1 \
+        libnccl-dev=$NCCL_VERSION-1+cuda10.2 && \
     apt-mark hold libnccl-dev && \
     # Cleanup - cannot use cleanup script here, otherwise too much is removed
     apt-get clean && \
@@ -97,15 +97,15 @@ ENV LIBRARY_PATH /usr/local/cuda/lib64/stubs
 ### END CUDA DEVEL ###
 
 ### CUDANN7 DEVEL ###
-# https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/10.1/ubuntu18.04-x86_64/devel/cudnn7/Dockerfile
+# https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/10.2/ubuntu18.04-x86_64/devel/cudnn7/Dockerfile
 
 ENV CUDNN_VERSION 7.6.5.32
 LABEL com.nvidia.cudnn.version="${CUDNN_VERSION}"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-            libcudnn7=$CUDNN_VERSION-1+cuda10.1 \
-            libcudnn7-dev=$CUDNN_VERSION-1+cuda10.1 && \
+            libcudnn7=$CUDNN_VERSION-1+cuda10.2 \
+            libcudnn7-dev=$CUDNN_VERSION-1+cuda10.2 && \
     apt-mark hold libcudnn7 && \
     # Cleanup
     apt-get clean && \
@@ -119,11 +119,11 @@ RUN apt-get update && \
 ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/usr/local/cuda/extras/CUPTI/lib64
 
 # Install TensorRT. Requires that libcudnn7 is installed above.
-# https://www.tensorflow.org/install/gpu#ubuntu_1804_cuda_101
+# https://www.tensorflow.org/install/gpu#ubuntu_1804_cuda_102
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libnvinfer6=6.0.1-1+cuda10.1 \
-        libnvinfer-dev=6.0.1-1+cuda10.1 \
-        libnvinfer-plugin6=6.0.1-1+cuda10.1 && \
+        libnvinfer6=6.0.1-1+cuda10.2 \
+        libnvinfer-dev=6.0.1-1+cuda10.2 \
+        libnvinfer-plugin6=6.0.1-1+cuda10.2 && \
     # Cleanup
     clean-layer.sh
 
@@ -133,9 +133,9 @@ RUN \
     apt-get update && \
     apt-get install -y libomp-dev libopenblas-base && \
     # Not needed? Install cuda-toolkit (e.g. for pytorch: https://pytorch.org/): https://anaconda.org/anaconda/cudatoolkit
-    conda install -y cudatoolkit=10.1 -c pytorch && \
+    conda install -y cudatoolkit=10.2 -c pytorch && \
     # Install cupy: https://cupy.chainer.org/
-    pip install --no-cache-dir cupy-cuda101 && \
+    pip install --no-cache-dir cupy-cuda102 && \
     # Install pycuda: https://pypi.org/project/pycuda
     pip install --no-cache-dir pycuda && \
     # Install gpu utils libs
@@ -147,7 +147,7 @@ RUN \
     # TODO: tensorflow 2.3.1 installs tenorboard 2.4.0 with problems, use 2.3.0
     pip install --no-cache-dir tensorflow-gpu==2.3.0 && \
     # Install ONNX GPU Runtime
-    # TODO: 1.4.x is latest with cuda 10.1 support
+    # TODO: 1.4.x is latest with cuda 10.2 support
     pip uninstall -y onnxruntime && \
     pip install --no-cache-dir onnxruntime-gpu==1.4.0 && \
     # Install pytorch gpu
@@ -160,9 +160,9 @@ RUN \
     conda install -y faiss-gpu -c pytorch && \
     # Update mxnet to gpu edition
     pip uninstall -y mxnet-mkl && \
-    pip install --no-cache-dir mxnet-cu101mkl==1.6.0.post0 && \
+    pip install --no-cache-dir mxnet-cu102mkl==1.6.0.post0 && \
     # install jax: https://github.com/google/jax#pip-installation
-    pip install --upgrade jax jaxlib==0.1.57+cuda101 -f https://storage.googleapis.com/jax-releases/jax_releases.html  && \
+    pip install --upgrade jax jaxlib==0.1.57+cuda102 -f https://storage.googleapis.com/jax-releases/jax_releases.html  && \
     # Install pygpu - Required for theano: http://deeplearning.net/software/libgpuarray/
     conda install -y pygpu && \
     # Install lightgbm
