@@ -9,24 +9,31 @@ USER root
 
 ### NVIDIA CUDA BASE ###
 # https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/10.2/ubuntu18.04-x86_64/base/Dockerfile
-RUN apt-get update && apt-get install -y --no-install-recommends gnupg2 curl ca-certificates && \
-    curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub | apt-key add - && \
-    echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda.list && \
-    echo "deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/nvidia-ml.list && \
-    # Cleanup - cannot use cleanup script here, otherwise too much is removed
-    apt-get clean && \
-    rm -rf $HOME/.cache/* && \
-    rm -rf /tmp/* && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  gnupg2 curl ca-certificates && \
+  curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub | apt-key add - && \
+  echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda.list && \
+  echo "deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/nvidia-ml.list && \
+  # apt-get purge --autoremove -y curl \
+  # && rm -rf /var/lib/apt/lists/*
+  # Cleanup - cannot use cleanup script here, otherwise too much is removed
+  apt-get clean && \
+  rm -rf $HOME/.cache/* && \
+  rm -rf /tmp/* && \
+  rm -rf /var/lib/apt/lists/*
 
-ENV CUDA_VERSION 10.2.89
-ENV CUDA_PKG_VERSION 10-2=$CUDA_VERSION-1
-
+# ENV CUDA_VERSION 11.2.1
+# ENV CUDA_PKG_VERSION 11-2=$CUDA_VERSION-1
+ENV CUDA_MAJOR_VERSION=11
+ENV CUDA_MINOR_VERSION=2
+ENV CUDA_PATCH_VERSION=1
+ENV CUDA_VERSION=$CUDA_MAJOR_VERSION.$CUDA_MINOR_VERSION.$CUDA_PATCH_VERSION
+ENV CUDA_PKG_VERSION=$CUDA_MAJOR_VERSION-$CUDA_MINOR_VERSION
 # For libraries in the cuda-compat-* package: https://docs.nvidia.com/cuda/eula/index.html#attachment-a
 RUN apt-get update && apt-get install -y --no-install-recommends \
         cuda-cudart-$CUDA_PKG_VERSION \
-        cuda-compat-10-2 && \
-    ln -s cuda-10.2 /usr/local/cuda && \
+        cuda-compat-$CUDA_PKG_VERSION && \
+    ln -s cuda-11.2 /usr/local/cuda && \
     rm -rf /var/lib/apt/lists/* && \
     # Cleanup - cannot use cleanup script here, otherwise too much is removed
     apt-get clean && \
@@ -46,7 +53,7 @@ ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64:${LD_LIBRARY_P
 # nvidia-container-runtime
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
-ENV NVIDIA_REQUIRE_CUDA "cuda>=10.2 brand=tesla,driver>=396,driver<397 brand=tesla,driver>=410,driver<411 brand=tesla,driver>=418,driver<419"
+ENV NVIDIA_REQUIRE_CUDA "cuda>=11.2 brand=tesla,driver>=396,driver<397 brand=tesla,driver>=410,driver<411 brand=tesla,driver>=418,driver<419"
 
 ### CUDA RUNTIME ###
 # https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/10.2/ubuntu18.04-x86_64/runtime/Dockerfile
@@ -55,10 +62,10 @@ ENV NCCL_VERSION 2.7.8
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         cuda-libraries-$CUDA_PKG_VERSION \
-        cuda-npp-$CUDA_PKG_VERSION \
+        cuda-npp-10-2 \
         cuda-nvtx-$CUDA_PKG_VERSION \
-        libcublas10=10.2.3.254-1 \
-        libnccl2=$NCCL_VERSION-1+cuda10.2 && \
+        libcublas-$CUDA_PKG_VERSION \
+        libnccl2 && \
     apt-mark hold libnccl2 && \
     # Cleanup - cannot use cleanup script here, otherwise too much is removed
     apt-get clean && \
@@ -67,7 +74,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 # apt from auto upgrading the cublas package. See https://gitlab.com/nvidia/container-images/cuda/-/issues/88
-RUN apt-mark hold libcublas10
+RUN apt-mark hold libcublas-$CUDA_PKG_VERSION
 
 ### END CUDA RUNTIME ###
 
@@ -77,11 +84,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         cuda-nvml-dev-$CUDA_PKG_VERSION \
         cuda-command-line-tools-$CUDA_PKG_VERSION \
         cuda-nvprof-$CUDA_PKG_VERSION \
-        cuda-npp-dev-$CUDA_PKG_VERSION \
+        cuda-npp-dev-10-2\
         cuda-libraries-dev-$CUDA_PKG_VERSION \
         cuda-minimal-build-$CUDA_PKG_VERSION \
-        libcublas-dev=10.2.3.254-1 \
-        libnccl-dev=$NCCL_VERSION-1+cuda10.2 && \
+        libcublas-dev-11-2 \
+        libnccl-dev && \
     apt-mark hold libnccl-dev && \
     # Cleanup - cannot use cleanup script here, otherwise too much is removed
     apt-get clean && \
@@ -90,7 +97,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 # apt from auto upgrading the cublas package. See https://gitlab.com/nvidia/container-images/cuda/-/issues/88
-RUN apt-mark hold libcublas-dev
+RUN apt-mark hold libcublas-dev-11-2
 
 ENV LIBRARY_PATH /usr/local/cuda/lib64/stubs
 
@@ -104,8 +111,7 @@ LABEL com.nvidia.cudnn.version="${CUDNN_VERSION}"
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-            libcudnn7=$CUDNN_VERSION-1+cuda10.2 \
-            libcudnn7-dev=$CUDNN_VERSION-1+cuda10.2 && \
+            libcudnn7-dev && \
     apt-mark hold libcudnn7 && \
     # Cleanup
     apt-get clean && \
@@ -121,9 +127,9 @@ ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/usr/local/cuda/extras/CUPTI/lib64
 # Install TensorRT. Requires that libcudnn7 is installed above.
 # https://www.tensorflow.org/install/gpu#ubuntu_1804_cuda_102
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libnvinfer6=6.0.1-1+cuda10.2 \
-        libnvinfer-dev=6.0.1-1+cuda10.2 \
-        libnvinfer-plugin6=6.0.1-1+cuda10.2 && \
+        libnvinfer6=6.0.1-1+cuda11.2 \
+        libnvinfer-dev=6.0.1-1+cuda11.2 \
+        libnvinfer-plugin6=6.0.1-1+cuda11.2 && \
     # Cleanup
     clean-layer.sh
 
@@ -133,7 +139,7 @@ RUN \
     apt-get update && \
     apt-get install -y libomp-dev libopenblas-base && \
     # Not needed? Install cuda-toolkit (e.g. for pytorch: https://pytorch.org/): https://anaconda.org/anaconda/cudatoolkit
-    conda install -y cudatoolkit=10.2 -c pytorch && \
+    conda install -y cudatoolkit=11.2 -c pytorch && \
     # Install cupy: https://cupy.chainer.org/
     pip install --no-cache-dir cupy-cuda102 && \
     # Install pycuda: https://pypi.org/project/pycuda
